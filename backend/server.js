@@ -10,9 +10,13 @@ app.use(express.json());
 
 // Import routes
 const authRoutes = require('./routes/auth');
+const gmailRoutes = require('./routes/gmail');
+const parserRoutes = require('./routes/parser');
 
 // Use routes
 app.use('/auth', authRoutes);
+app.use('/gmail', gmailRoutes);
+app.use('/parser', parserRoutes);
 
 // Test route - Check if server is running
 app.get('/health', (req, res) => {
