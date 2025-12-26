@@ -8,6 +8,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Import routes
+const authRoutes = require('./routes/auth');
+
+// Use routes
+app.use('/auth', authRoutes);
+
 // Test route - Check if server is running
 app.get('/health', (req, res) => {
   res.json({ 
