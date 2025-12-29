@@ -19,9 +19,9 @@ router.post('/test-connection', async (req, res) => {
   }
 });
 
-// Fetch bank emails
+// Fetch potential transaction emails
 router.post('/fetch-emails', async (req, res) => {
-  const { accessToken, maxResults = 10 } = req.body;
+  const { accessToken, maxResults = 20 } = req.body;
 
   if (!accessToken) {
     return res.status(400).json({ error: 'Access token required' });
@@ -29,7 +29,7 @@ router.post('/fetch-emails', async (req, res) => {
 
   try {
     const gmailService = new GmailService(accessToken);
-    const emails = await gmailService.fetchBankEmails(maxResults);
+    const emails = await gmailService.fetchPotentialTransactionEmails(maxResults);
     
     res.json({
       success: true,
