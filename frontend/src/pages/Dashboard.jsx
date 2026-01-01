@@ -1,50 +1,108 @@
 import { useState, useEffect } from 'react';
-import { syncEmails, getUserEmail } from '../utils/api';
+import { fullSync, getTransactions } from '../utils/api';
 import TransactionCard from '../components/TransactionCard';
 
 function Dashboard() {
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
   const [stats, setStats] = useState({
     totalTransactions: 0,
     totalSpent: 0,
+    totalIncome: 0,
     lastSync: null
   });
 
+  // Get user info from localStorage
+  const userId = localStorage.getItem('user_id');
+  const userEmail = localStorage.getItem('user_email');
+  const userName = localStorage.getItem('user_name');
+  const accessToken = localStorage.getItem('access_token');
+
+  // Load transactions from database on mount
   useEffect(() => {
-    // Get user email on load
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      getUserEmail(token).then(email => {
-        if (email) setUserEmail(email);
-      });
-    }
+    loadTransactions();
   }, []);
 
+  /**
+   * Calculate statistics from loaded transactions
+   * Design Decision: Calculate in frontend since we already have the data
+   */
+  const calculateStats = (transactions) => {
+    const totalTransactions = transactions.length;
+    
+    const totalSpent = transactions
+      .filter(t => t.transaction_type === 'debit')
+      .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+    const totalIncome = transactions
+      .filter(t => t.transaction_type === 'credit')
+      .reduce((sum, t) => sum + parseFloat(t.amount || 0), 0);
+
+    setStats({
+      totalTransactions,
+      totalSpent,
+      totalIncome,
+      lastSync: new Date().toLocaleString()
+    });
+  };
+
+  /**
+   * Load transactions from database
+   * Design Decision: Always load from database, not memory
+   */
+  const loadTransactions = async () => {
+    setLoading(true);
+    
+    try {
+      console.log('Loading transactions for user:', userId);
+      
+      const result = await getTransactions(userId, {}, 1, 50);
+
+      console.log('API response:', result);
+
+      if (result.success && result.transactions) {
+        console.log('Transactions loaded:', result.transactions);
+        setTransactions(result.transactions);
+        calculateStats(result.transactions); // Calculate stats from loaded data
+      } else {
+        console.error('Failed to load transactions:', result.error);
+        setTransactions([]);
+        setStats({
+          totalTransactions: 0,
+          totalSpent: 0,
+          totalIncome: 0,
+          lastSync: null
+        });
+      }
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Sync emails: Fetch → Parse → Save to database
+   */
   const handleSync = async () => {
     setSyncing(true);
-    const token = localStorage.getItem('access_token');
 
     try {
-      const result = await syncEmails(token, 20);
+      const result = await fullSync(accessToken, userEmail, 50);
 
       if (result.success) {
-        setTransactions(result.transactions);
-        
-        // Calculate stats
-        const totalSpent = result.transactions
-          .filter(t => t.transaction_type === 'debit')
-          .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+        // Reload data from database
+        await loadTransactions();
 
-        setStats({
-          totalTransactions: result.totalTransactions,
-          totalSpent: totalSpent,
-          lastSync: new Date().toLocaleString()
-        });
-
-        alert(`✅ Successfully synced ${result.totalTransactions} transactions!`);
+        // Show success message
+        alert(`✅ Successfully synced!\n\n` +
+          `Emails fetched: ${result.stats.emailsFetched}\n` +
+          `Transactions found: ${result.stats.transactionsFound}\n` +
+          `New transactions saved: ${result.stats.transactionsSaved || 0}\n` +
+          `Duplicates skipped: ${result.stats.duplicatesSkipped || 0}`
+        );
       } else {
         alert(`❌ Sync failed: ${result.error}`);
       }
@@ -60,6 +118,37 @@ function Dashboard() {
     localStorage.clear();
     window.location.href = '/';
   };
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f5f5f5'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid #f3f3f3',
+            borderTop: '4px solid #3b82f6',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem'
+          }}></div>
+          <p style={{ color: '#666' }}>Loading your transactions...</p>
+        </div>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -88,7 +177,7 @@ function Dashboard() {
               Spendwise Dashboard
             </h1>
             <p style={{ color: '#666', fontSize: '0.875rem' }}>
-              {userEmail || 'Loading...'}
+              Welcome back, {userName || userEmail}
             </p>
           </div>
 
@@ -205,13 +294,13 @@ function Dashboard() {
                 No transactions yet
               </p>
               <p style={{ fontSize: '0.875rem' }}>
-                Click "Sync Emails" to fetch your transaction emails
+                Click "Sync Emails" to fetch your transaction emails from Gmail
               </p>
             </div>
           ) : (
             <div>
-              {transactions.map((transaction, index) => (
-                <TransactionCard key={index} transaction={transaction} />
+              {transactions.map((transaction) => (
+                <TransactionCard key={transaction.id} transaction={transaction} />
               ))}
             </div>
           )}

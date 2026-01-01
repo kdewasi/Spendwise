@@ -17,7 +17,7 @@ function AuthCallback() {
 
         setStatus('Exchanging code for tokens...');
 
-        // Exchange code for tokens
+        // Exchange code for tokens (backend saves user to database!)
         const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/google-callback`, {
           method: 'POST',
           headers: {
@@ -29,11 +29,17 @@ function AuthCallback() {
         const data = await response.json();
 
         if (data.success) {
-          // Save tokens to localStorage
+          // Save tokens AND user info to localStorage
           localStorage.setItem('access_token', data.access_token);
           if (data.refresh_token) {
             localStorage.setItem('refresh_token', data.refresh_token);
           }
+          
+          // NEW: Save user info
+          localStorage.setItem('user_id', data.user.id);
+          localStorage.setItem('user_email', data.user.email);
+          localStorage.setItem('user_name', data.user.name);
+          localStorage.setItem('user_picture', data.user.picture);
 
           setStatus('Success! Redirecting...');
           

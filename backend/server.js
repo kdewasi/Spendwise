@@ -1,8 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
+const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
@@ -13,33 +14,45 @@ const authRoutes = require('./routes/auth');
 const gmailRoutes = require('./routes/gmail');
 const parserRoutes = require('./routes/parser');
 const databaseRoutes = require('./routes/database');
+const syncRoutes = require('./routes/sync');
+const transactionRoutes = require('./routes/transactions');
 
-// Use routes
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    service: 'Spendwise API'
+  });
+});
+
+// API routes
 app.use('/auth', authRoutes);
 app.use('/gmail', gmailRoutes);
 app.use('/parser', parserRoutes);
 app.use('/database', databaseRoutes);
+app.use('/sync', syncRoutes);
+app.use('/transactions', transactionRoutes);
 
-// Test route - Check if server is running
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'Server is running!',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Endpoint not found',
+    path: req.path
   });
 });
 
-// API test route
-app.get('/api/test', (req, res) => {
-  res.json({ 
-    message: 'Spendwise API is working!',
-    version: '1.0.0'
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message
   });
 });
 
 // Start server
-const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`📍 Test it: http://localhost:${PORT}/health`);
+  console.log(`🚀 Spendwise API running on http://localhost:${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
 });

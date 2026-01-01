@@ -1,32 +1,19 @@
 function TransactionCard({ transaction }) {
-  // Category emoji mapping
-  const categoryEmojis = {
-    groceries: '🛒',
-    dining: '🍽️',
-    transport: '🚗',
-    shopping: '🛍️',
-    bills: '💡',
-    entertainment: '🎬',
-    health: '🏥',
-    transfer: '💸',
-    other: '📌'
-  };
+  // Safely get category info from the joined categories table
+  const category = transaction.categories || {};
+  const categoryName = category.name || 'other';
+  const categoryDisplay = category.display_name || 'Other';
+  const categoryIcon = category.icon || '📌';
+  const categoryColor = category.color || '#6b7280';
 
-  // Category colors
-  const categoryColors = {
-    groceries: '#10b981',
-    dining: '#f59e0b',
-    transport: '#3b82f6',
-    shopping: '#ec4899',
-    bills: '#8b5cf6',
-    entertainment: '#ef4444',
-    health: '#06b6d4',
-    transfer: '#6366f1',
-    other: '#6b7280'
-  };
-
-  const emoji = categoryEmojis[transaction.category] || '📌';
-  const color = categoryColors[transaction.category] || '#6b7280';
+  // Safely get transaction details
+  const merchant = transaction.merchant_name || 'Unknown';
+  const amount = transaction.amount || 0;
+  const date = transaction.transaction_date || '';
+  const time = transaction.transaction_time || null;
+  const institution = transaction.institution || '';
+  const cardLast4 = transaction.card_last4 || null;
+  const transactionType = transaction.transaction_type || 'debit';
 
   return (
     <div style={{
@@ -45,13 +32,13 @@ function TransactionCard({ transaction }) {
           width: '48px',
           height: '48px',
           borderRadius: '50%',
-          backgroundColor: color + '20',
+          backgroundColor: categoryColor + '20',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '1.5rem'
         }}>
-          {emoji}
+          {categoryIcon}
         </div>
         
         <div>
@@ -61,20 +48,20 @@ function TransactionCard({ transaction }) {
             color: '#111',
             marginBottom: '0.25rem'
           }}>
-            {transaction.merchant}
+            {merchant}
           </h3>
           <p style={{
             fontSize: '0.875rem',
             color: '#666'
           }}>
-            {transaction.date} {transaction.time ? `• ${transaction.time}` : ''}
+            {date} {time ? `• ${time}` : ''}
           </p>
           <p style={{
             fontSize: '0.75rem',
             color: '#999',
             marginTop: '0.25rem'
           }}>
-            {transaction.institution} {transaction.card_last4 ? `••${transaction.card_last4}` : ''}
+            {institution} {cardLast4 ? `••${cardLast4}` : ''}
           </p>
         </div>
       </div>
@@ -84,19 +71,19 @@ function TransactionCard({ transaction }) {
         <p style={{
           fontSize: '1.25rem',
           fontWeight: '700',
-          color: transaction.transaction_type === 'credit' ? '#10b981' : '#111',
+          color: transactionType === 'credit' ? '#10b981' : '#111',
           marginBottom: '0.25rem'
         }}>
-          {transaction.transaction_type === 'credit' ? '+' : '-'}
-          ${parseFloat(transaction.amount).toFixed(2)}
+          {transactionType === 'credit' ? '+' : '-'}
+          ${parseFloat(amount).toFixed(2)}
         </p>
         <p style={{
           fontSize: '0.75rem',
-          color: color,
+          color: categoryColor,
           fontWeight: '500',
           textTransform: 'capitalize'
         }}>
-          {transaction.category}
+          {categoryDisplay}
         </p>
       </div>
     </div>
